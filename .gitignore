@@ -9,7 +9,6 @@ env/
 
 # Environment variable files
 .env
-.env.example
 
 # Database files
 *.db
