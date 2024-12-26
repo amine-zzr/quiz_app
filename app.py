@@ -24,6 +24,11 @@ def create_app():
     init_api(app)
 
     login_manager.login_view = 'login'
+    login_manager.login_message_category = 'info'
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
 
     @app.route('/')
     def index():
@@ -31,25 +36,38 @@ def create_app():
 
     @app.route('/login', methods=['GET', 'POST'])
     def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+            
         if request.method == 'POST':
             email = request.form.get('email')
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
             
             if user and check_password_hash(user.password_hash, password):
-                login_user(user)
-                return redirect(url_for('dashboard'))
-            flash('Invalid email or password')
+                login_user(user, remember=True)
+                next_page = request.args.get('next')
+                flash('Login successful!', 'success')
+                return redirect(next_page if next_page else url_for('dashboard'))
+            flash('Invalid email or password', 'danger')
         return render_template('login.html')
 
     @app.route('/register', methods=['GET', 'POST'])
     def register():
+        if current_user.is_authenticated:
+            return redirect(url_for('dashboard'))
+            
         if request.method == 'POST':
             email = request.form.get('email')
             password = request.form.get('password')
+            confirm_password = request.form.get('confirm_password')
+            
+            if password != confirm_password:
+                flash('Passwords do not match', 'danger')
+                return redirect(url_for('register'))
             
             if User.query.filter_by(email=email).first():
-                flash('Email already registered')
+                flash('Email already registered', 'danger')
                 return redirect(url_for('register'))
             
             user = User(email=email, password_hash=generate_password_hash(password))
@@ -57,8 +75,16 @@ def create_app():
             db.session.commit()
             
             login_user(user)
+            flash('Registration successful!', 'success')
             return redirect(url_for('dashboard'))
         return render_template('register.html')
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        flash('You have been logged out successfully', 'info')
+        return redirect(url_for('index'))
 
     @app.route('/dashboard')
     @login_required
@@ -98,17 +124,12 @@ def create_app():
         db.session.add(result)
         db.session.commit()
         
+        percentage = (score / total_questions) * 100
         return jsonify({
             'score': score,
             'total': total_questions,
-            'percentage': (score/total_questions) * 100
+            'percentage': percentage
         })
-
-    @app.route('/logout')
-    @login_required
-    def logout():
-        logout_user()
-        return redirect(url_for('index'))
 
     with app.app_context():
         db.create_all()
