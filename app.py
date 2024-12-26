@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from extensions import db, login_manager, migrate
 from models import User, Quiz, Question, UserQuizResult
 from api import init_api
+from quiz_api import get_trivia_categories, fetch_and_save_quiz
 
 load_dotenv()
 
@@ -91,7 +92,33 @@ def create_app():
     def dashboard():
         quizzes = Quiz.query.all()
         results = UserQuizResult.query.filter_by(user_id=current_user.id).all()
-        return render_template('dashboard.html', quizzes=quizzes, results=results)
+        categories = get_trivia_categories()
+        return render_template('dashboard.html', 
+                             quizzes=quizzes, 
+                             results=results, 
+                             categories=categories)
+
+    @app.route('/create_quiz', methods=['POST'])
+    @login_required
+    def create_quiz():
+        category_id = request.form.get('category_id')
+        difficulty = request.form.get('difficulty')
+        
+        if category_id:
+            category_id = int(category_id)
+        
+        quiz = fetch_and_save_quiz(
+            category_id=category_id,
+            difficulty=difficulty,
+            amount=10  # 10 questions per quiz
+        )
+        
+        if quiz:
+            flash('New quiz created successfully!', 'success')
+            return redirect(url_for('take_quiz', quiz_id=quiz.id))
+        else:
+            flash('Failed to create quiz. Please try again.', 'danger')
+            return redirect(url_for('dashboard'))
 
     @app.route('/quiz/<int:quiz_id>')
     @login_required
