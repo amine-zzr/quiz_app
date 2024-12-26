@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="quiz-container">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>{{ quiz.title }}</h3>
+            <div class="timer">Time remaining: <span id="time">{{ quiz.time_limit }}:00</span></div>
+        </div>
+        <div class="card-body">
+            <form id="quiz-form">
+                {% for question in quiz.questions %}
+                <div class="question-container mb-4" data-question-id="{{ question.id }}">
+                    <h5 class="question-text">{{ loop.index }}. {{ question.question_text }}</h5>
+                    <div class="options">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="A" id="q{{ question.id }}_a">
+                            <label class="form-check-label" for="q{{ question.id }}_a">
+                                {{ question.option_a }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="B" id="q{{ question.id }}_b">
+                            <label class="form-check-label" for="q{{ question.id }}_b">
+                                {{ question.option_b }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="C" id="q{{ question.id }}_c">
+                            <label class="form-check-label" for="q{{ question.id }}_c">
+                                {{ question.option_c }}
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="q{{ question.id }}" value="D" id="q{{ question.id }}_d">
+                            <label class="form-check-label" for="q{{ question.id }}_d">
+                                {{ question.option_d }}
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                <button type="submit" class="btn btn-primary">Submit Quiz</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let timeLeft = {{ quiz.time_limit }} * 60;
+        const timerDisplay = document.getElementById('time');
+        
+        const timer = setInterval(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                submitQuiz();
+            }
+            timeLeft--;
+        }, 1000);
+
+        document.getElementById('quiz-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitQuiz();
+        });
+
+        function submitQuiz() {
+            const answers = {};
+            document.querySelectorAll('.question-container').forEach(container => {
+                const questionId = container.dataset.questionId;
+                const selectedAnswer = container.querySelector('input[type="radio"]:checked');
+                answers[questionId] = selectedAnswer ? selectedAnswer.value : null;
+            });
+
+            fetch(`/submit_quiz/{{ quiz.id }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(answers)
+            })
+            .then(response => response.json())
+            .then(data => {
+                clearInterval(timer);
+                showResults(data);
+            });
+        }
+
+        function showResults(data) {
+            const resultsHtml = `
+                <div class="results-container text-center">
+                    <h2>Quiz Results</h2>
+                    <p class="h4">Score: ${data.score}/${data.total}</p>
+                    <p class="h5">Percentage: ${data.percentage.toFixed(1)}%</p>
+                    <a href="/dashboard" class="btn btn-primary mt-3">Back to Dashboard</a>
+                </div>
+            `;
+            document.querySelector('.quiz-container').innerHTML = resultsHtml;
+        }
+    });
+</script>
+{% endblock %}

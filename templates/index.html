@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 text-center">
+            <h1 class="display-4 mb-4">Welcome to Quiz App</h1>
+            <p class="lead mb-4">Test your knowledge with our interactive quizzes!</p>
+            
+            {% if current_user.is_authenticated %}
+                <div class="mb-4">
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+                </div>
+            {% else %}
+                <div class="mb-4">
+                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg me-3">Login</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register</a>
+                </div>
+            {% endif %}
+            
+            <div class="row mt-5">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Multiple Choice</h5>
+                            <p class="card-text">Answer questions with multiple choice options</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Timed Quizzes</h5>
+                            <p class="card-text">Challenge yourself with time limits</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Track Progress</h5>
+                            <p class="card-text">View your scores and improvement over time</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h2>Available Quizzes</h2>
+        <div class="row">
+            {% for quiz in quizzes %}
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ quiz.title }}</h5>
+                        <p class="card-text">{{ quiz.description }}</p>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                Time limit: {{ quiz.time_limit }} minutes
+                            </small>
+                        </p>
+                        <a href="{{ url_for('take_quiz', quiz_id=quiz.id) }}" class="btn btn-primary">Start Quiz</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <h2>Your Results</h2>
+        {% for result in results %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ result.quiz.title }}</h5>
+                <p class="card-text">
+                    Score: {{ result.score }}/{{ result.total_questions }}
+                    ({{ (result.score/result.total_questions * 100)|round(1) }}%)
+                </p>
+                <p class="card-text">
+                    <small class="text-muted">
+                        Completed: {{ result.completed_at.strftime('%Y-%m-%d %H:%M') }}
+                    </small>
+                </p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
