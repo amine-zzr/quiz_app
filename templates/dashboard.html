@@ -3,45 +3,138 @@
 {% block content %}
 <div class="row">
     <div class="col-md-8">
-        <h2>Available Quizzes</h2>
-        <div class="row">
-            {% for quiz in quizzes %}
-            <div class="col-md-6 mb-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ quiz.title }}</h5>
-                        <p class="card-text">{{ quiz.description }}</p>
-                        <p class="card-text">
-                            <small class="text-muted">
-                                Time limit: {{ quiz.time_limit }} minutes
-                            </small>
-                        </p>
-                        <a href="{{ url_for('take_quiz', quiz_id=quiz.id) }}" class="btn btn-primary">Start Quiz</a>
+        <div class="card mb-4">
+            <div class="card-header">
+                <h3><i class="fas fa-list me-2"></i>Available Quizzes</h3>
+            </div>
+            <div class="card-body">
+                {% if quizzes %}
+                    <div class="row">
+                    {% for quiz in quizzes %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">{{ quiz.title }}</h5>
+                                    <p class="card-text">{{ quiz.description }}</p>
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-muted">{{ quiz.questions|length }} questions</small>
+                                        <small class="text-muted">{{ quiz.time_limit }} minutes</small>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <a href="{{ url_for('take_quiz', quiz_id=quiz.id) }}" class="btn btn-primary w-100">
+                                        <i class="fas fa-play me-2"></i>Take Quiz
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
                     </div>
+                {% else %}
+                    <p class="text-center">No quizzes available. Create one!</p>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if results %}
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-history me-2"></i>Your Quiz History</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Quiz</th>
+                                <th>Score</th>
+                                <th>Percentage</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr>
+                                <td>{{ result.quiz.title }}</td>
+                                <td>{{ result.score }}/{{ result.total_questions }}</td>
+                                <td>
+                                    <span class="badge {% if (result.score / result.total_questions * 100) >= 70 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ "%.1f"|format(result.score / result.total_questions * 100) }}%
+                                    </span>
+                                </td>
+                                <td>{{ result.completed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            {% endfor %}
         </div>
+        {% endif %}
     </div>
-    
+
     <div class="col-md-4">
-        <h2>Your Results</h2>
-        {% for result in results %}
-        <div class="card mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="fas fa-plus-circle me-2"></i>Create New Quiz</h3>
+            </div>
             <div class="card-body">
-                <h5 class="card-title">{{ result.quiz.title }}</h5>
-                <p class="card-text">
-                    Score: {{ result.score }}/{{ result.total_questions }}
-                    ({{ (result.score/result.total_questions * 100)|round(1) }}%)
-                </p>
-                <p class="card-text">
-                    <small class="text-muted">
-                        Completed: {{ result.completed_at.strftime('%Y-%m-%d %H:%M') }}
-                    </small>
-                </p>
+                <form action="{{ url_for('create_quiz') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category_id">
+                            <option value="">Any Category</option>
+                            {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="difficulty" class="form-label">Difficulty</label>
+                        <select class="form-select" id="difficulty" name="difficulty">
+                            <option value="">Any Difficulty</option>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-magic me-2"></i>Generate Quiz
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-        {% endfor %}
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3><i class="fas fa-chart-bar me-2"></i>Your Stats</h3>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <h4 class="mb-3">Total Quizzes Taken</h4>
+                    <h2 class="display-4 mb-4">{{ results|length }}</h2>
+                    
+                    {% if results %}
+                        {% set total_score = namespace(value=0) %}
+                        {% set total_questions = namespace(value=0) %}
+                        {% for result in results %}
+                            {% set total_score.value = total_score.value + result.score %}
+                            {% set total_questions.value = total_questions.value + result.total_questions %}
+                        {% endfor %}
+                        
+                        {% set average_score = (total_score.value / total_questions.value * 100)|round(1) %}
+                        <h4 class="mb-3">Average Score</h4>
+                        <h2 class="display-4 mb-0">
+                            <span class="badge {% if average_score >= 70 %}bg-success{% else %}bg-danger{% endif %}">
+                                {{ average_score }}%
+                            </span>
+                        </h2>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
