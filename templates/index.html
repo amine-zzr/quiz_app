@@ -1,50 +1,127 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8 text-center">
-            <h1 class="display-4 mb-4">Welcome to Quiz App</h1>
-            <p class="lead mb-4">Test your knowledge with our interactive quizzes!</p>
-            
-            {% if current_user.is_authenticated %}
-                <div class="mb-4">
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
-                </div>
+<div class="landing-page">
+    <!-- Hero Section -->
+    <section class="hero-section text-center py-5">
+        <div class="container">
+            <h1 class="display-3 mb-4">Welcome to QuizMaster</h1>
+            <p class="lead mb-4">Challenge yourself with our diverse collection of quizzes across various categories!</p>
+            {% if not current_user.is_authenticated %}
+            <div class="cta-buttons">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-3">
+                    <i class="fas fa-user-plus me-2"></i>Get Started
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login
+                </a>
+            </div>
             {% else %}
-                <div class="mb-4">
-                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg me-3">Login</a>
-                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg">Register</a>
-                </div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-play-circle me-2"></i>Start Quizzing
+            </a>
             {% endif %}
-            
-            <div class="row mt-5">
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features-section py-5 bg-light">
+        <div class="container">
+            <h2 class="text-center mb-5">Why Choose QuizMaster?</h2>
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Multiple Choice</h5>
-                            <p class="card-text">Answer questions with multiple choice options</p>
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-brain fa-3x text-primary"></i>
                         </div>
+                        <h3>Learn & Grow</h3>
+                        <p>Expand your knowledge with our diverse range of topics and difficulty levels.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Timed Quizzes</h5>
-                            <p class="card-text">Challenge yourself with time limits</p>
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-chart-line fa-3x text-primary"></i>
                         </div>
+                        <h3>Track Progress</h3>
+                        <p>Monitor your performance and see your improvement over time.</p>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title">Track Progress</h5>
-                            <p class="card-text">View your scores and improvement over time</p>
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon mb-3">
+                            <i class="fas fa-trophy fa-3x text-primary"></i>
                         </div>
+                        <h3>Compete & Achieve</h3>
+                        <p>Challenge yourself and earn achievements as you master different topics.</p>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
+    </section>
+
+    <!-- Categories Section -->
+    <section class="categories-section py-5">
+        <div class="container">
+            <h2 class="text-center mb-5">Popular Categories</h2>
+            <div class="row g-4">
+                <div class="col-md-3 col-sm-6">
+                    <div class="category-card text-center p-4">
+                        <i class="fas fa-laptop-code fa-2x mb-3 text-primary"></i>
+                        <h4>Technology</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="category-card text-center p-4">
+                        <i class="fas fa-flask fa-2x mb-3 text-primary"></i>
+                        <h4>Science</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="category-card text-center p-4">
+                        <i class="fas fa-globe-americas fa-2x mb-3 text-primary"></i>
+                        <h4>Geography</h4>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6">
+                    <div class="category-card text-center p-4">
+                        <i class="fas fa-history fa-2x mb-3 text-primary"></i>
+                        <h4>History</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta-section py-5 bg-primary text-white text-center">
+        <div class="container">
+            <h2 class="mb-4">Ready to Test Your Knowledge?</h2>
+            <p class="lead mb-4">Join thousands of users who are already expanding their horizons!</p>
+            {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-rocket me-2"></i>Start Your Journey
+            </a>
+            {% else %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-lg">
+                <i class="fas fa-play-circle me-2"></i>Go to Dashboard
+            </a>
+            {% endif %}
+        </div>
+    </section>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Add smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+</script>
 {% endblock %}
