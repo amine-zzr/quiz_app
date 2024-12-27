@@ -91,7 +91,7 @@
                                 {% for result in results %}
                                 <tr>
                                     <td>{{ result.quiz.title }}</td>
-                                    <td>{{ result.score }}%</td>
+                                    <td>{{ "%.1f"|format((result.score / result.total_questions) * 100) }}%</td>
                                     <td>{{ result.completed_at.strftime('%Y-%m-%d %H:%M') }}</td>
                                 </tr>
                                 {% endfor %}
