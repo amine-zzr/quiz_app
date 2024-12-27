@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Create New Quiz</h3>
+                </div>
+                <div class="card-body">
+                    <form id="quizForm" method="POST">
+                        <!-- Quiz Details Section -->
+                        <div class="mb-4">
+                            <h4 class="mb-3">Quiz Details</h4>
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Quiz Title</label>
+                                <input type="text" class="form-control" id="title" name="title" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="time_limit" class="form-label">Time Limit (minutes)</label>
+                                <input type="number" class="form-control" id="time_limit" name="time_limit" min="1" value="15" required>
+                            </div>
+                        </div>
+
+                        <!-- Questions Section -->
+                        <div id="questions-container">
+                            <h4 class="mb-3">Questions</h4>
+                            <div class="question-block card mb-4">
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label">Question 1</label>
+                                        <input type="text" class="form-control" name="questions[0][text]" required>
+                                    </div>
+                                    <div class="options-container">
+                                        <div class="mb-2">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="questions[0][correct]" value="A" required>
+                                                </div>
+                                                <input type="text" class="form-control" name="questions[0][options][A]" placeholder="Option A" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="questions[0][correct]" value="B">
+                                                </div>
+                                                <input type="text" class="form-control" name="questions[0][options][B]" placeholder="Option B" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="questions[0][correct]" value="C">
+                                                </div>
+                                                <input type="text" class="form-control" name="questions[0][options][C]" placeholder="Option C" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <div class="input-group">
+                                                <div class="input-group-text">
+                                                    <input type="radio" name="questions[0][correct]" value="D">
+                                                </div>
+                                                <input type="text" class="form-control" name="questions[0][options][D]" placeholder="Option D" required>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-danger btn-sm mt-2 remove-question" style="display: none;">
+                                        <i class="fas fa-trash me-1"></i>Remove Question
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Add Question Button -->
+                        <div class="mb-4">
+                            <button type="button" class="btn btn-success" id="add-question">
+                                <i class="fas fa-plus me-1"></i>Add Question
+                            </button>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-1"></i>Create Quiz
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let questionCount = 1;
+
+function createQuestionBlock(index) {
+    return `
+        <div class="question-block card mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Question ${index + 1}</label>
+                    <input type="text" class="form-control" name="questions[${index}][text]" required>
+                </div>
+                <div class="options-container">
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input type="radio" name="questions[${index}][correct]" value="A" required>
+                            </div>
+                            <input type="text" class="form-control" name="questions[${index}][options][A]" placeholder="Option A" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input type="radio" name="questions[${index}][correct]" value="B">
+                            </div>
+                            <input type="text" class="form-control" name="questions[${index}][options][B]" placeholder="Option B" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input type="radio" name="questions[${index}][correct]" value="C">
+                            </div>
+                            <input type="text" class="form-control" name="questions[${index}][options][C]" placeholder="Option C" required>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="input-group">
+                            <div class="input-group-text">
+                                <input type="radio" name="questions[${index}][correct]" value="D">
+                            </div>
+                            <input type="text" class="form-control" name="questions[${index}][options][D]" placeholder="Option D" required>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm mt-2 remove-question">
+                    <i class="fas fa-trash me-1"></i>Remove Question
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+document.getElementById('add-question').addEventListener('click', function() {
+    const container = document.getElementById('questions-container');
+    container.insertAdjacentHTML('beforeend', createQuestionBlock(questionCount));
+    questionCount++;
+    
+    // Show all remove buttons if there's more than one question
+    if (questionCount > 1) {
+        document.querySelectorAll('.remove-question').forEach(btn => btn.style.display = 'block');
+    }
+});
+
+document.getElementById('questions-container').addEventListener('click', function(e) {
+    if (e.target.classList.contains('remove-question') || e.target.parentElement.classList.contains('remove-question')) {
+        const questionBlock = e.target.closest('.question-block');
+        questionBlock.remove();
+        questionCount--;
+        
+        // Hide remove buttons if only one question remains
+        if (questionCount === 1) {
+            document.querySelectorAll('.remove-question').forEach(btn => btn.style.display = 'none');
+        }
+        
+        // Update question numbers
+        document.querySelectorAll('.question-block').forEach((block, index) => {
+            block.querySelector('.form-label').textContent = `Question ${index + 1}`;
+        });
+    }
+});
+
+document.getElementById('quizForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Validate that each question has a correct answer selected
+    const questions = document.querySelectorAll('.question-block');
+    let isValid = true;
+    
+    questions.forEach((question, index) => {
+        const correctAnswer = question.querySelector('input[type="radio"]:checked');
+        if (!correctAnswer) {
+            alert(`Please select a correct answer for Question ${index + 1}`);
+            isValid = false;
+        }
+    });
+    
+    if (isValid) {
+        this.submit();
+    }
+});
+</script>
+{% endblock %}
