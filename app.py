@@ -120,17 +120,92 @@ def create_app():
     @app.route('/dashboard')
     @login_required
     def dashboard():
-        quizzes = Quiz.query.all()
+        # Get user's quizzes (ones they created)
+        user_created_quizzes = Quiz.query.filter_by(created_by=current_user.id).all()
+        
+        # Get all available quizzes
+        all_quizzes = Quiz.query.all()
+        
+        # Get user's quiz results
         results = UserQuizResult.query.filter_by(user_id=current_user.id).all()
-        categories = get_trivia_categories()
+        
+        # Get quiz categories from the API
+        try:
+            categories = get_trivia_categories()
+        except:
+            categories = []  # Fallback if API call fails
+            
         return render_template('dashboard.html', 
-                             quizzes=quizzes, 
+                             user_quizzes=user_created_quizzes,
+                             quizzes=all_quizzes, 
                              results=results, 
                              categories=categories)
 
-    @app.route('/create_quiz', methods=['POST'])
+    @app.route('/create_quiz', methods=['GET', 'POST'])
     @login_required
     def create_quiz():
+        if request.method == 'POST':
+            try:
+                # Get quiz details
+                title = request.form.get('title')
+                description = request.form.get('description')
+                time_limit = int(request.form.get('time_limit'))
+
+                # Create new quiz
+                quiz = Quiz(
+                    title=title,
+                    description=description,
+                    time_limit=time_limit,
+                    created_by=current_user.id
+                )
+                db.session.add(quiz)
+                db.session.flush()  # Get the quiz ID before committing
+
+                # Process questions
+                questions_data = []
+                i = 0
+                while f'questions[{i}][text]' in request.form:
+                    question_text = request.form.get(f'questions[{i}][text]')
+                    correct_answer = request.form.get(f'questions[{i}][correct]')
+                    
+                    # Get options
+                    options = {
+                        'A': request.form.get(f'questions[{i}][options][A]'),
+                        'B': request.form.get(f'questions[{i}][options][B]'),
+                        'C': request.form.get(f'questions[{i}][options][C]'),
+                        'D': request.form.get(f'questions[{i}][options][D]')
+                    }
+                    
+                    question = Question(
+                        quiz_id=quiz.id,
+                        question_text=question_text,
+                        option_a=options['A'],
+                        option_b=options['B'],
+                        option_c=options['C'],
+                        option_d=options['D'],
+                        correct_answer=correct_answer
+                    )
+                    questions_data.append(question)
+                    i += 1
+
+                # Add all questions
+                db.session.bulk_save_objects(questions_data)
+                db.session.commit()
+
+                flash('Quiz created successfully!', 'success')
+                return redirect(url_for('dashboard'))
+
+            except Exception as e:
+                db.session.rollback()
+                flash('Error creating quiz. Please try again.', 'danger')
+                print(f"Error creating quiz: {str(e)}")
+                return redirect(url_for('create_quiz'))
+
+        return render_template('create_quiz.html')
+
+    @app.route('/create_quiz_api', methods=['POST'])
+    @login_required
+    def create_quiz_api():
         category_id = request.form.get('category_id')
         difficulty = request.form.get('difficulty')
         
