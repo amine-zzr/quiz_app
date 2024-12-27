@@ -30,49 +30,106 @@
                         <!-- Questions Section -->
                         <div id="questions-container">
                             <h4 class="mb-3">Questions</h4>
+                            <div class="question-template d-none">
+                                <div class="card mb-4 question-card">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <h5 class="card-title question-number mb-0">Question #</h5>
+                                            <button type="button" class="btn btn-danger btn-sm remove-question">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Question Text</label>
+                                            <textarea class="form-control" name="questions[0][text]" required></textarea>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Option A</label>
+                                                <input type="text" class="form-control" name="questions[0][option_a]" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Option B</label>
+                                                <input type="text" class="form-control" name="questions[0][option_b]" required>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Option C</label>
+                                                <input type="text" class="form-control" name="questions[0][option_c]" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Option D</label>
+                                                <input type="text" class="form-control" name="questions[0][option_d]" required>
+                                            </div>
+                                        </div>
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label">Correct Answer</label>
+                                                <select class="form-select" name="questions[0][correct_answer]" required>
+                                                    <option value="">Select correct answer</option>
+                                                    <option value="A">Option A</option>
+                                                    <option value="B">Option B</option>
+                                                    <option value="C">Option C</option>
+                                                    <option value="D">Option D</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Explanation</label>
+                                            <textarea class="form-control" name="questions[0][explanation]" placeholder="Explain why this answer is correct..."></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="question-block card mb-4">
                                 <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <h5 class="card-title question-number mb-0">Question 1</h5>
+                                        <button type="button" class="btn btn-danger btn-sm remove-question" style="display: none;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Question 1</label>
-                                        <input type="text" class="form-control" name="questions[0][text]" required>
+                                        <label class="form-label">Question Text</label>
+                                        <textarea class="form-control" name="questions[0][text]" required></textarea>
                                     </div>
-                                    <div class="options-container">
-                                        <div class="mb-2">
-                                            <div class="input-group">
-                                                <div class="input-group-text">
-                                                    <input type="radio" name="questions[0][correct]" value="A" required>
-                                                </div>
-                                                <input type="text" class="form-control" name="questions[0][options][A]" placeholder="Option A" required>
-                                            </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Option A</label>
+                                            <input type="text" class="form-control" name="questions[0][option_a]" required>
                                         </div>
-                                        <div class="mb-2">
-                                            <div class="input-group">
-                                                <div class="input-group-text">
-                                                    <input type="radio" name="questions[0][correct]" value="B">
-                                                </div>
-                                                <input type="text" class="form-control" name="questions[0][options][B]" placeholder="Option B" required>
-                                            </div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <div class="input-group">
-                                                <div class="input-group-text">
-                                                    <input type="radio" name="questions[0][correct]" value="C">
-                                                </div>
-                                                <input type="text" class="form-control" name="questions[0][options][C]" placeholder="Option C" required>
-                                            </div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <div class="input-group">
-                                                <div class="input-group-text">
-                                                    <input type="radio" name="questions[0][correct]" value="D">
-                                                </div>
-                                                <input type="text" class="form-control" name="questions[0][options][D]" placeholder="Option D" required>
-                                            </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Option B</label>
+                                            <input type="text" class="form-control" name="questions[0][option_b]" required>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-danger btn-sm mt-2 remove-question" style="display: none;">
-                                        <i class="fas fa-trash me-1"></i>Remove Question
-                                    </button>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Option C</label>
+                                            <input type="text" class="form-control" name="questions[0][option_c]" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Option D</label>
+                                            <input type="text" class="form-control" name="questions[0][option_d]" required>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Correct Answer</label>
+                                            <select class="form-select" name="questions[0][correct_answer]" required>
+                                                <option value="">Select correct answer</option>
+                                                <option value="A">Option A</option>
+                                                <option value="B">Option B</option>
+                                                <option value="C">Option C</option>
+                                                <option value="D">Option D</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Explanation</label>
+                                        <textarea class="form-control" name="questions[0][explanation]" placeholder="Explain why this answer is correct..."></textarea>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -106,47 +163,52 @@ function createQuestionBlock(index) {
     return `
         <div class="question-block card mb-4">
             <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title question-number mb-0">Question ${index + 1}</h5>
+                    <button type="button" class="btn btn-danger btn-sm remove-question">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
                 <div class="mb-3">
-                    <label class="form-label">Question ${index + 1}</label>
-                    <input type="text" class="form-control" name="questions[${index}][text]" required>
+                    <label class="form-label">Question Text</label>
+                    <textarea class="form-control" name="questions[${index}][text]" required></textarea>
                 </div>
-                <div class="options-container">
-                    <div class="mb-2">
-                        <div class="input-group">
-                            <div class="input-group-text">
-                                <input type="radio" name="questions[${index}][correct]" value="A" required>
-                            </div>
-                            <input type="text" class="form-control" name="questions[${index}][options][A]" placeholder="Option A" required>
-                        </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Option A</label>
+                        <input type="text" class="form-control" name="questions[${index}][option_a]" required>
                     </div>
-                    <div class="mb-2">
-                        <div class="input-group">
-                            <div class="input-group-text">
-                                <input type="radio" name="questions[${index}][correct]" value="B">
-                            </div>
-                            <input type="text" class="form-control" name="questions[${index}][options][B]" placeholder="Option B" required>
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <div class="input-group">
-                            <div class="input-group-text">
-                                <input type="radio" name="questions[${index}][correct]" value="C">
-                            </div>
-                            <input type="text" class="form-control" name="questions[${index}][options][C]" placeholder="Option C" required>
-                        </div>
-                    </div>
-                    <div class="mb-2">
-                        <div class="input-group">
-                            <div class="input-group-text">
-                                <input type="radio" name="questions[${index}][correct]" value="D">
-                            </div>
-                            <input type="text" class="form-control" name="questions[${index}][options][D]" placeholder="Option D" required>
-                        </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Option B</label>
+                        <input type="text" class="form-control" name="questions[${index}][option_b]" required>
                     </div>
                 </div>
-                <button type="button" class="btn btn-danger btn-sm mt-2 remove-question">
-                    <i class="fas fa-trash me-1"></i>Remove Question
-                </button>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Option C</label>
+                        <input type="text" class="form-control" name="questions[${index}][option_c]" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Option D</label>
+                        <input type="text" class="form-control" name="questions[${index}][option_d]" required>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Correct Answer</label>
+                        <select class="form-select" name="questions[${index}][correct_answer]" required>
+                            <option value="">Select correct answer</option>
+                            <option value="A">Option A</option>
+                            <option value="B">Option B</option>
+                            <option value="C">Option C</option>
+                            <option value="D">Option D</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Explanation</label>
+                    <textarea class="form-control" name="questions[${index}][explanation]" placeholder="Explain why this answer is correct..."></textarea>
+                </div>
             </div>
         </div>
     `;
@@ -176,7 +238,7 @@ document.getElementById('questions-container').addEventListener('click', functio
         
         // Update question numbers
         document.querySelectorAll('.question-block').forEach((block, index) => {
-            block.querySelector('.form-label').textContent = `Question ${index + 1}`;
+            block.querySelector('.question-number').textContent = `Question ${index + 1}`;
         });
     }
 });
@@ -189,8 +251,8 @@ document.getElementById('quizForm').addEventListener('submit', function(e) {
     let isValid = true;
     
     questions.forEach((question, index) => {
-        const correctAnswer = question.querySelector('input[type="radio"]:checked');
-        if (!correctAnswer) {
+        const correctAnswer = question.querySelector('select[name="questions[' + index + '][correct_answer]"]');
+        if (correctAnswer.value === "") {
             alert(`Please select a correct answer for Question ${index + 1}`);
             isValid = false;
         }
