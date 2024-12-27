@@ -12,8 +12,9 @@ class User(UserMixin, db.Model):
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    time_limit = db.Column(db.Integer)  # Time limit in minutes
+    description = db.Column(db.Text, nullable=False)
+    time_limit = db.Column(db.Integer, nullable=False)  # in minutes
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     questions = db.relationship('Question', backref='quiz', lazy=True)
     results = db.relationship('UserQuizResult', backref='quiz', lazy=True)
