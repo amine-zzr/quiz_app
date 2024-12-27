@@ -63,14 +63,43 @@ def create_app():
             password = request.form.get('password')
             confirm_password = request.form.get('confirm_password')
             
-            if password != confirm_password:
-                flash('Passwords do not match', 'danger')
+            # Validate email format
+            if not email or '@' not in email:
+                flash('Please enter a valid email address', 'danger')
                 return redirect(url_for('register'))
             
+            # Check if email already exists
             if User.query.filter_by(email=email).first():
                 flash('Email already registered', 'danger')
                 return redirect(url_for('register'))
             
+            # Validate password
+            if not password or len(password) < 8:
+                flash('Password must be at least 8 characters long', 'danger')
+                return redirect(url_for('register'))
+            
+            if not any(c.isupper() for c in password):
+                flash('Password must contain at least one uppercase letter', 'danger')
+                return redirect(url_for('register'))
+                
+            if not any(c.islower() for c in password):
+                flash('Password must contain at least one lowercase letter', 'danger')
+                return redirect(url_for('register'))
+                
+            if not any(c.isdigit() for c in password):
+                flash('Password must contain at least one number', 'danger')
+                return redirect(url_for('register'))
+                
+            if not any(c in '!@#$%^&*(),.?":{}|<>' for c in password):
+                flash('Password must contain at least one special character', 'danger')
+                return redirect(url_for('register'))
+            
+            # Check if passwords match
+            if password != confirm_password:
+                flash('Passwords do not match', 'danger')
+                return redirect(url_for('register'))
+            
+            # Create new user
             user = User(email=email, password_hash=generate_password_hash(password))
             db.session.add(user)
             db.session.commit()
@@ -78,6 +107,7 @@ def create_app():
             login_user(user)
             flash('Registration successful!', 'success')
             return redirect(url_for('dashboard'))
+            
         return render_template('register.html')
 
     @app.route('/logout')
