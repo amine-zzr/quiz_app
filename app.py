@@ -146,12 +146,10 @@ def create_app():
     def create_quiz():
         if request.method == 'POST':
             try:
-                # Get quiz details
                 title = request.form.get('title')
                 description = request.form.get('description')
                 time_limit = int(request.form.get('time_limit'))
-
-                # Create new quiz
+                
                 quiz = Quiz(
                     title=title,
                     description=description,
@@ -159,42 +157,27 @@ def create_app():
                     created_by=current_user.id
                 )
                 db.session.add(quiz)
-                db.session.flush()  # Get the quiz ID before committing
-
+                db.session.flush()  # Get the quiz ID
+                
                 # Process questions
-                questions_data = []
-                i = 0
-                while f'questions[{i}][text]' in request.form:
-                    question_text = request.form.get(f'questions[{i}][text]')
-                    correct_answer = request.form.get(f'questions[{i}][correct]')
-                    
-                    # Get options
-                    options = {
-                        'A': request.form.get(f'questions[{i}][options][A]'),
-                        'B': request.form.get(f'questions[{i}][options][B]'),
-                        'C': request.form.get(f'questions[{i}][options][C]'),
-                        'D': request.form.get(f'questions[{i}][options][D]')
-                    }
-                    
+                question_count = len(request.form.getlist('questions[][text]'))
+                for i in range(question_count):
                     question = Question(
                         quiz_id=quiz.id,
-                        question_text=question_text,
-                        option_a=options['A'],
-                        option_b=options['B'],
-                        option_c=options['C'],
-                        option_d=options['D'],
-                        correct_answer=correct_answer
+                        question_text=request.form.getlist('questions[][text]')[i],
+                        option_a=request.form.getlist('questions[][option_a]')[i],
+                        option_b=request.form.getlist('questions[][option_b]')[i],
+                        option_c=request.form.getlist('questions[][option_c]')[i],
+                        option_d=request.form.getlist('questions[][option_d]')[i],
+                        correct_answer=request.form.getlist('questions[][correct_answer]')[i],
+                        explanation=request.form.getlist('questions[][explanation]')[i]
                     )
-                    questions_data.append(question)
-                    i += 1
-
-                # Add all questions
-                db.session.bulk_save_objects(questions_data)
+                    db.session.add(question)
+                
                 db.session.commit()
-
                 flash('Quiz created successfully!', 'success')
                 return redirect(url_for('dashboard'))
-
+                
             except Exception as e:
                 db.session.rollback()
                 flash('Error creating quiz. Please try again.', 'danger')
@@ -239,11 +222,22 @@ def create_app():
         
         score = 0
         total_questions = len(quiz.questions)
+        feedback = []
         
         for question_id, answer in answers.items():
             question = Question.query.get(int(question_id))
-            if question and question.correct_answer == answer:
-                score += 1
+            if question:
+                is_correct = question.correct_answer == answer
+                if is_correct:
+                    score += 1
+                
+                feedback.append({
+                    'question_id': question.id,
+                    'is_correct': is_correct,
+                    'correct_answer': question.correct_answer,
+                    'explanation': question.explanation,
+                    'your_answer': answer
+                })
         
         result = UserQuizResult(
             user_id=current_user.id,
@@ -260,7 +254,8 @@ def create_app():
         return jsonify({
             'score': score,
             'total': total_questions,
-            'percentage': percentage
+            'percentage': percentage,
+            'feedback': feedback
         })
 
     with app.app_context():
