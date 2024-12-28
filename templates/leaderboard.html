@@ -67,7 +67,7 @@
                                         {{ loop.index }}
                                         {% endif %}
                                     </td>
-                                    <td>{{ result.user.email.split('@')[0] }}</td>
+                                    <td>{{ result.user.username }}</td>
                                     <td>{{ result.quiz.title }}</td>
                                     <td>{{ "%.1f"|format((result.score / result.total_questions) * 100) }}%</td>
                                     <td>{{ result.time_taken }} seconds</td>
