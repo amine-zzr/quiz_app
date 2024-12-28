@@ -94,104 +94,13 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const totalQuestions = {{ quiz.questions|length }};
-    let currentQuestionIndex = 1;
-    let timeLeft = {{ quiz.time_limit * 60 }};
-    const startTime = Date.now();
-    const timerDisplay = document.getElementById('timer');
-    const progressBar = document.getElementById('progressBar');
-    const currentQuestionDisplay = document.getElementById('currentQuestionNum');
-    const prevBtn = document.getElementById('prevBtn');
-    const nextBtn = document.getElementById('nextBtn');
-    const submitBtn = document.getElementById('submitBtn');
-
-    // Timer functionality
-    const timer = setInterval(() => {
-        const minutes = Math.floor(timeLeft / 60);
-        const seconds = timeLeft % 60;
-        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        
-        if (timeLeft <= 60) {
-            timerDisplay.classList.add('text-danger');
-        }
-        
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            submitQuiz();
-        }
-        timeLeft--;
-    }, 1000);
-
-    function updateNavigation() {
-        prevBtn.disabled = currentQuestionIndex === 1;
-        
-        if (currentQuestionIndex === totalQuestions) {
-            nextBtn.classList.add('d-none');
-            submitBtn.classList.remove('d-none');
-        } else {
-            nextBtn.classList.remove('d-none');
-            submitBtn.classList.add('d-none');
-        }
-
-        // Update progress
-        const progress = (currentQuestionIndex / totalQuestions) * 100;
-        progressBar.style.width = `${progress}%`;
-        currentQuestionDisplay.textContent = currentQuestionIndex;
-    }
-
-    function showQuestion(index) {
-        document.querySelectorAll('.question-container').forEach(container => {
-            container.classList.add('d-none');
-        });
-        document.querySelector(`.question-container[data-question-index="${index}"]`).classList.remove('d-none');
-        currentQuestionIndex = index;
-        updateNavigation();
-    }
-
-    prevBtn.addEventListener('click', () => {
-        if (currentQuestionIndex > 1) {
-            showQuestion(currentQuestionIndex - 1);
-        }
-    });
-
-    nextBtn.addEventListener('click', () => {
-        if (currentQuestionIndex < totalQuestions) {
-            showQuestion(currentQuestionIndex + 1);
-        }
-    });
-
-    // Save answers as user progresses
-    document.querySelectorAll('input[type="radio"]').forEach(radio => {
-        radio.addEventListener('change', () => {
-            localStorage.setItem(`quiz_{{ quiz.id }}_${radio.name}`, radio.value);
-        });
-
-        // Restore saved answers
-        const savedAnswer = localStorage.getItem(`quiz_{{ quiz.id }}_${radio.name}`);
-        if (savedAnswer === radio.value) {
-            radio.checked = true;
-        }
-    });
-
-    document.getElementById('quizForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        submitQuiz();
-    });
+    let startTime = Date.now();
+    let answers = {};
 
     function submitQuiz() {
-        const answers = {};
-        const timeTaken = Math.round((Date.now() - startTime) / 1000); // Convert to seconds
+        const timeTaken = Math.floor((Date.now() - startTime) / 1000); // Convert to seconds
         
-        document.querySelectorAll('.question-container').forEach(container => {
-            const questionId = container.dataset.questionId;
-            const selectedAnswer = container.querySelector('input[type="radio"]:checked');
-            if (selectedAnswer) {
-                answers[questionId] = selectedAnswer.value;
-            }
-        });
-
-        fetch('{{ url_for("submit_quiz", quiz_id=quiz.id) }}', {
+        fetch('/submit_quiz/{{ quiz.id }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -267,6 +176,104 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('An error occurred while submitting the quiz. Please try again.');
         });
     }
-});
+
+    function selectAnswer(questionId, answer) {
+        answers[questionId] = answer;
+        // Update UI to show selected answer
+        const options = document.querySelectorAll(`input[name="question${questionId}"]`);
+        options.forEach(option => {
+            const label = option.parentElement;
+            if (option.value === answer) {
+                label.classList.add('selected');
+            } else {
+                label.classList.remove('selected');
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const totalQuestions = {{ quiz.questions|length }};
+        let currentQuestionIndex = 1;
+        let timeLeft = {{ quiz.time_limit * 60 }};
+        const timerDisplay = document.getElementById('timer');
+        const progressBar = document.getElementById('progressBar');
+        const currentQuestionDisplay = document.getElementById('currentQuestionNum');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+
+        // Timer functionality
+        const timer = setInterval(() => {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            
+            if (timeLeft <= 60) {
+                timerDisplay.classList.add('text-danger');
+            }
+            
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                submitQuiz();
+            }
+            timeLeft--;
+        }, 1000);
+
+        function updateNavigation() {
+            prevBtn.disabled = currentQuestionIndex === 1;
+            
+            if (currentQuestionIndex === totalQuestions) {
+                nextBtn.classList.add('d-none');
+                submitBtn.classList.remove('d-none');
+            } else {
+                nextBtn.classList.remove('d-none');
+                submitBtn.classList.add('d-none');
+            }
+
+            // Update progress
+            const progress = (currentQuestionIndex / totalQuestions) * 100;
+            progressBar.style.width = `${progress}%`;
+            currentQuestionDisplay.textContent = currentQuestionIndex;
+        }
+
+        function showQuestion(index) {
+            document.querySelectorAll('.question-container').forEach(container => {
+                container.classList.add('d-none');
+            });
+            document.querySelector(`.question-container[data-question-index="${index}"]`).classList.remove('d-none');
+            currentQuestionIndex = index;
+            updateNavigation();
+        }
+
+        prevBtn.addEventListener('click', () => {
+            if (currentQuestionIndex > 1) {
+                showQuestion(currentQuestionIndex - 1);
+            }
+        });
+
+        nextBtn.addEventListener('click', () => {
+            if (currentQuestionIndex < totalQuestions) {
+                showQuestion(currentQuestionIndex + 1);
+            }
+        });
+
+        // Save answers as user progresses
+        document.querySelectorAll('input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                selectAnswer(radio.name.replace('question', ''), radio.value);
+            });
+
+            // Restore saved answers
+            const savedAnswer = localStorage.getItem(`quiz_{{ quiz.id }}_${radio.name}`);
+            if (savedAnswer === radio.value) {
+                radio.checked = true;
+            }
+        });
+
+        document.getElementById('quizForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            submitQuiz();
+        });
+    });
 </script>
 {% endblock %}
