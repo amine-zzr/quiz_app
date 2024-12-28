@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta
+from sqlalchemy import func, desc
 import os
 from dotenv import load_dotenv
 
@@ -218,7 +219,9 @@ def create_app():
     @login_required
     def submit_quiz(quiz_id):
         quiz = Quiz.query.get_or_404(quiz_id)
-        answers = request.get_json()
+        data = request.get_json()
+        answers = data.get('answers', {})
+        time_taken = data.get('time_taken', 0)
         
         score = 0
         total_questions = len(quiz.questions)
@@ -244,6 +247,7 @@ def create_app():
             quiz_id=quiz_id,
             score=score,
             total_questions=total_questions,
+            time_taken=time_taken,
             completed_at=datetime.utcnow()
         )
         
@@ -257,6 +261,74 @@ def create_app():
             'percentage': percentage,
             'feedback': feedback
         })
+
+    @app.route('/leaderboard')
+    @login_required
+    def leaderboard():
+        # Get filter parameters
+        quiz_id = request.args.get('quiz_id', type=int)
+        timeframe = request.args.get('timeframe', 'all')
+
+        # Base query
+        query = db.session.query(UserQuizResult).\
+            join(Quiz).\
+            join(User)
+
+        # Apply filters
+        if quiz_id:
+            query = query.filter(UserQuizResult.quiz_id == quiz_id)
+
+        if timeframe != 'all':
+            if timeframe == 'today':
+                start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            elif timeframe == 'week':
+                start_date = datetime.utcnow() - timedelta(days=7)
+            elif timeframe == 'month':
+                start_date = datetime.utcnow() - timedelta(days=30)
+            query = query.filter(UserQuizResult.completed_at >= start_date)
+
+        # Get results ordered by score percentage and time taken
+        leaderboard = query.order_by(
+            desc((UserQuizResult.score * 100 / UserQuizResult.total_questions)),
+            UserQuizResult.time_taken
+        ).limit(100).all()
+
+        # Calculate user stats
+        user_stats = {}
+        user_results = UserQuizResult.query.filter_by(user_id=current_user.id).all()
+        if user_results:
+            total_quizzes = len(user_results)
+            avg_score = sum(r.score * 100 / r.total_questions for r in user_results) / total_quizzes
+            best_score = max(r.score * 100 / r.total_questions for r in user_results)
+            
+            # Calculate user's rank
+            all_users_avg = db.session.query(
+                UserQuizResult.user_id,
+                func.avg(UserQuizResult.score * 100 / UserQuizResult.total_questions).label('avg_score')
+            ).group_by(UserQuizResult.user_id).order_by(desc('avg_score')).all()
+            
+            user_rank = next(i for i, (user_id, _) in enumerate(all_users_avg, 1) if user_id == current_user.id)
+            
+            user_stats = {
+                'total_quizzes': total_quizzes,
+                'avg_score': avg_score,
+                'best_score': best_score,
+                'rank': user_rank
+            }
+        else:
+            user_stats = {
+                'total_quizzes': 0,
+                'avg_score': 0,
+                'best_score': 0,
+                'rank': '-'
+            }
+
+        return render_template('leaderboard.html',
+                             leaderboard=leaderboard,
+                             quizzes=Quiz.query.all(),
+                             selected_quiz_id=quiz_id,
+                             timeframe=timeframe,
+                             user_stats=user_stats)
 
     with app.app_context():
         db.create_all()
