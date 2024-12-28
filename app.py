@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta
+from sqlalchemy import func, desc
 import os
 from dotenv import load_dotenv
 
@@ -45,12 +46,15 @@ def create_app():
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
             
-            if user and check_password_hash(user.password_hash, password):
-                login_user(user, remember=True)
+            if user and user.check_password(password):
+                login_user(user)
                 next_page = request.args.get('next')
                 flash('Login successful!', 'success')
                 return redirect(next_page if next_page else url_for('dashboard'))
-            flash('Invalid email or password', 'danger')
+            else:
+                flash('Invalid email or password', 'danger')
+                return redirect(url_for('login'))
+                
         return render_template('login.html')
 
     @app.route('/register', methods=['GET', 'POST'])
@@ -60,54 +64,41 @@ def create_app():
             
         if request.method == 'POST':
             email = request.form.get('email')
+            username = request.form.get('username')
             password = request.form.get('password')
             confirm_password = request.form.get('confirm_password')
-            
-            # Validate email format
-            if not email or '@' not in email:
-                flash('Please enter a valid email address', 'danger')
+
+            if not all([email, username, password, confirm_password]):
+                flash('All fields are required')
                 return redirect(url_for('register'))
-            
-            # Check if email already exists
-            if User.query.filter_by(email=email).first():
-                flash('Email already registered', 'danger')
-                return redirect(url_for('register'))
-            
-            # Validate password
-            if not password or len(password) < 8:
-                flash('Password must be at least 8 characters long', 'danger')
-                return redirect(url_for('register'))
-            
-            if not any(c.isupper() for c in password):
-                flash('Password must contain at least one uppercase letter', 'danger')
-                return redirect(url_for('register'))
-                
-            if not any(c.islower() for c in password):
-                flash('Password must contain at least one lowercase letter', 'danger')
-                return redirect(url_for('register'))
-                
-            if not any(c.isdigit() for c in password):
-                flash('Password must contain at least one number', 'danger')
-                return redirect(url_for('register'))
-                
-            if not any(c in '!@#$%^&*(),.?":{}|<>' for c in password):
-                flash('Password must contain at least one special character', 'danger')
-                return redirect(url_for('register'))
-            
-            # Check if passwords match
+
             if password != confirm_password:
-                flash('Passwords do not match', 'danger')
+                flash('Passwords do not match')
                 return redirect(url_for('register'))
-            
-            # Create new user
-            user = User(email=email, password_hash=generate_password_hash(password))
+
+            if User.query.filter_by(email=email).first():
+                flash('Email already registered')
+                return redirect(url_for('register'))
+
+            if User.query.filter_by(username=username).first():
+                flash('Username already taken')
+                return redirect(url_for('register'))
+
+            if not username.isalnum() or len(username) < 3 or len(username) > 20:
+                flash('Username must be 3-20 characters long and contain only letters and numbers')
+                return redirect(url_for('register'))
+
+            user = User(
+                email=email,
+                username=username
+            )
+            user.set_password(password)
             db.session.add(user)
             db.session.commit()
-            
+
             login_user(user)
-            flash('Registration successful!', 'success')
             return redirect(url_for('dashboard'))
-            
+
         return render_template('register.html')
 
     @app.route('/logout')
@@ -218,7 +209,9 @@ def create_app():
     @login_required
     def submit_quiz(quiz_id):
         quiz = Quiz.query.get_or_404(quiz_id)
-        answers = request.get_json()
+        data = request.get_json()
+        answers = data.get('answers', {})
+        time_taken = data.get('time_taken', 0)  # Get time taken from request
         
         score = 0
         total_questions = len(quiz.questions)
@@ -239,11 +232,13 @@ def create_app():
                     'your_answer': answer
                 })
         
+        # Create and save the quiz result
         result = UserQuizResult(
             user_id=current_user.id,
             quiz_id=quiz_id,
             score=score,
             total_questions=total_questions,
+            time_taken=time_taken,  # Save the time taken
             completed_at=datetime.utcnow()
         )
         
@@ -255,8 +250,87 @@ def create_app():
             'score': score,
             'total': total_questions,
             'percentage': percentage,
-            'feedback': feedback
+            'feedback': feedback,
+            'time_taken': time_taken  # Return time taken in response
         })
+
+    @app.route('/leaderboard')
+    @login_required
+    def leaderboard():
+        # Get filter parameters
+        quiz_id = request.args.get('quiz_id', type=int)
+        timeframe = request.args.get('timeframe', 'all')
+
+        # Base query
+        results = db.session.query(
+            UserQuizResult,
+            User.username,
+            Quiz.title,
+            (UserQuizResult.score * 100.0 / UserQuizResult.total_questions).label('percentage')
+        ).join(
+            User, UserQuizResult.user_id == User.id
+        ).join(
+            Quiz, UserQuizResult.quiz_id == Quiz.id
+        )
+
+        # Apply filters
+        if quiz_id:
+            results = results.filter(UserQuizResult.quiz_id == quiz_id)
+
+        if timeframe != 'all':
+            if timeframe == 'today':
+                start_date = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            elif timeframe == 'week':
+                start_date = datetime.utcnow() - timedelta(days=7)
+            elif timeframe == 'month':
+                start_date = datetime.utcnow() - timedelta(days=30)
+            results = results.filter(UserQuizResult.completed_at >= start_date)
+
+        # Order by percentage and time taken
+        results = results.order_by(
+            desc('percentage'),
+            UserQuizResult.time_taken
+        ).limit(100).all()
+
+        # Calculate user stats
+        user_results = UserQuizResult.query.filter_by(user_id=current_user.id).all()
+        
+        if user_results:
+            total_quizzes = len(user_results)
+            avg_score = sum(r.score * 100.0 / r.total_questions for r in user_results) / total_quizzes
+            best_score = max(r.score * 100.0 / r.total_questions for r in user_results)
+            
+            # Calculate user's rank
+            all_users_avg = db.session.query(
+                UserQuizResult.user_id,
+                func.avg(UserQuizResult.score * 100.0 / UserQuizResult.total_questions).label('avg_score')
+            ).group_by(UserQuizResult.user_id).order_by(desc('avg_score')).all()
+            
+            try:
+                user_rank = next(i for i, (user_id, _) in enumerate(all_users_avg, 1) if user_id == current_user.id)
+            except StopIteration:
+                user_rank = '-'
+            
+            user_stats = {
+                'total_quizzes': total_quizzes,
+                'avg_score': avg_score,
+                'best_score': best_score,
+                'rank': user_rank
+            }
+        else:
+            user_stats = {
+                'total_quizzes': 0,
+                'avg_score': 0.0,
+                'best_score': 0.0,
+                'rank': '-'
+            }
+
+        return render_template('leaderboard.html',
+                             leaderboard=results,
+                             quizzes=Quiz.query.all(),
+                             selected_quiz_id=quiz_id,
+                             timeframe=timeframe,
+                             user_stats=user_stats)
 
     with app.app_context():
         db.create_all()
