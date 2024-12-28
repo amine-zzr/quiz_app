@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalQuestions = {{ quiz.questions|length }};
     let currentQuestionIndex = 1;
     let timeLeft = {{ quiz.time_limit * 60 }};
+    const startTime = Date.now();
     const timerDisplay = document.getElementById('timer');
     const progressBar = document.getElementById('progressBar');
     const currentQuestionDisplay = document.getElementById('currentQuestionNum');
@@ -180,6 +181,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function submitQuiz() {
         const answers = {};
+        const timeTaken = Math.round((Date.now() - startTime) / 1000); // Convert to seconds
+        
         document.querySelectorAll('.question-container').forEach(container => {
             const questionId = container.dataset.questionId;
             const selectedAnswer = container.querySelector('input[type="radio"]:checked');
@@ -193,7 +196,10 @@ document.addEventListener('DOMContentLoaded', function() {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(answers)
+            body: JSON.stringify({
+                answers: answers,
+                time_taken: timeTaken
+            })
         })
         .then(response => response.json())
         .then(data => {
