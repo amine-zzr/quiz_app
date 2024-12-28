@@ -46,12 +46,15 @@ def create_app():
             password = request.form.get('password')
             user = User.query.filter_by(email=email).first()
             
-            if user and check_password_hash(user.password_hash, password):
-                login_user(user, remember=True)
+            if user and user.check_password(password):
+                login_user(user)
                 next_page = request.args.get('next')
                 flash('Login successful!', 'success')
                 return redirect(next_page if next_page else url_for('dashboard'))
-            flash('Invalid email or password', 'danger')
+            else:
+                flash('Invalid email or password', 'danger')
+                return redirect(url_for('login'))
+                
         return render_template('login.html')
 
     @app.route('/register', methods=['GET', 'POST'])
