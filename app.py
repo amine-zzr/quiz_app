@@ -211,7 +211,7 @@ def create_app():
         quiz = Quiz.query.get_or_404(quiz_id)
         data = request.get_json()
         answers = data.get('answers', {})
-        time_taken = data.get('time_taken', 0)
+        time_taken = data.get('time_taken', 0)  # Get time taken from request
         
         score = 0
         total_questions = len(quiz.questions)
@@ -232,12 +232,13 @@ def create_app():
                     'your_answer': answer
                 })
         
+        # Create and save the quiz result
         result = UserQuizResult(
             user_id=current_user.id,
             quiz_id=quiz_id,
             score=score,
             total_questions=total_questions,
-            time_taken=time_taken,
+            time_taken=time_taken,  # Save the time taken
             completed_at=datetime.utcnow()
         )
         
@@ -249,7 +250,8 @@ def create_app():
             'score': score,
             'total': total_questions,
             'percentage': percentage,
-            'feedback': feedback
+            'feedback': feedback,
+            'time_taken': time_taken  # Return time taken in response
         })
 
     @app.route('/leaderboard')
@@ -260,13 +262,20 @@ def create_app():
         timeframe = request.args.get('timeframe', 'all')
 
         # Base query
-        query = db.session.query(UserQuizResult).\
-            join(Quiz).\
-            join(User)
+        results = db.session.query(
+            UserQuizResult,
+            User.username,
+            Quiz.title,
+            (UserQuizResult.score * 100.0 / UserQuizResult.total_questions).label('percentage')
+        ).join(
+            User, UserQuizResult.user_id == User.id
+        ).join(
+            Quiz, UserQuizResult.quiz_id == Quiz.id
+        )
 
         # Apply filters
         if quiz_id:
-            query = query.filter(UserQuizResult.quiz_id == quiz_id)
+            results = results.filter(UserQuizResult.quiz_id == quiz_id)
 
         if timeframe != 'all':
             if timeframe == 'today':
@@ -275,29 +284,32 @@ def create_app():
                 start_date = datetime.utcnow() - timedelta(days=7)
             elif timeframe == 'month':
                 start_date = datetime.utcnow() - timedelta(days=30)
-            query = query.filter(UserQuizResult.completed_at >= start_date)
+            results = results.filter(UserQuizResult.completed_at >= start_date)
 
-        # Get results ordered by score percentage and time taken
-        leaderboard = query.order_by(
-            desc((UserQuizResult.score * 100 / UserQuizResult.total_questions)),
+        # Order by percentage and time taken
+        results = results.order_by(
+            desc('percentage'),
             UserQuizResult.time_taken
         ).limit(100).all()
 
         # Calculate user stats
-        user_stats = {}
         user_results = UserQuizResult.query.filter_by(user_id=current_user.id).all()
+        
         if user_results:
             total_quizzes = len(user_results)
-            avg_score = sum(r.score * 100 / r.total_questions for r in user_results) / total_quizzes
-            best_score = max(r.score * 100 / r.total_questions for r in user_results)
+            avg_score = sum(r.score * 100.0 / r.total_questions for r in user_results) / total_quizzes
+            best_score = max(r.score * 100.0 / r.total_questions for r in user_results)
             
             # Calculate user's rank
             all_users_avg = db.session.query(
                 UserQuizResult.user_id,
-                func.avg(UserQuizResult.score * 100 / UserQuizResult.total_questions).label('avg_score')
+                func.avg(UserQuizResult.score * 100.0 / UserQuizResult.total_questions).label('avg_score')
             ).group_by(UserQuizResult.user_id).order_by(desc('avg_score')).all()
             
-            user_rank = next(i for i, (user_id, _) in enumerate(all_users_avg, 1) if user_id == current_user.id)
+            try:
+                user_rank = next(i for i, (user_id, _) in enumerate(all_users_avg, 1) if user_id == current_user.id)
+            except StopIteration:
+                user_rank = '-'
             
             user_stats = {
                 'total_quizzes': total_quizzes,
@@ -308,13 +320,13 @@ def create_app():
         else:
             user_stats = {
                 'total_quizzes': 0,
-                'avg_score': 0,
-                'best_score': 0,
+                'avg_score': 0.0,
+                'best_score': 0.0,
                 'rank': '-'
             }
 
         return render_template('leaderboard.html',
-                             leaderboard=leaderboard,
+                             leaderboard=results,
                              quizzes=Quiz.query.all(),
                              selected_quiz_id=quiz_id,
                              timeframe=timeframe,
