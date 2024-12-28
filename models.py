@@ -1,6 +1,7 @@
 from extensions import db
 from flask_login import UserMixin
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -10,6 +11,15 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     quizzes = db.relationship('Quiz', backref='author', lazy=True)
     quiz_results = db.relationship('UserQuizResult', backref='user', lazy=True)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def get_id(self):
+        return str(self.id)
 
 class Quiz(db.Model):
     id = db.Column(db.Integer, primary_key=True)
