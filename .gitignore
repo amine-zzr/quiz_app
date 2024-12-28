@@ -11,6 +11,7 @@ env/
 .env
 
 # Database files
+instance/
 *.db
 
 # Ignore vim files:
