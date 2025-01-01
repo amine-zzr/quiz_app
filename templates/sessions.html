@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Active Sessions</h2>
+            <p class="text-muted">Here you can view and manage your active sessions across different devices.</p>
+            
+            <div class="mb-3">
+                <a href="{{ url_for('end_all_user_sessions') }}" class="btn btn-warning" 
+                   onclick="return confirm('Are you sure you want to end all other sessions?')">
+                    End All Other Sessions
+                </a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Device / Browser</th>
+                            <th>IP Address</th>
+                            <th>Last Activity</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user_session in sessions %}
+                        <tr {% if user_session.session_id == session.get('session_id') %}class="table-primary"{% endif %}>
+                            <td>
+                                <i class="bi bi-display"></i>
+                                {{ user_session.user_agent[:50] + '...' if user_session.user_agent|length > 50 else user_session.user_agent }}
+                                {% if user_session.session_id == session.get('session_id') %}
+                                    <span class="badge bg-primary">Current Session</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ user_session.ip_address }}</td>
+                            <td>{{ user_session.last_activity.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>{{ user_session.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if user_session.session_id != session.get('session_id') %}
+                                <a href="{{ url_for('end_specific_session', session_id=user_session.session_id) }}" 
+                                   class="btn btn-sm btn-danger"
+                                   onclick="return confirm('Are you sure you want to end this session?')">
+                                    End Session
+                                </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Session Security Tips</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><i class="bi bi-check-circle text-success"></i> Regularly review your active sessions</li>
+                        <li><i class="bi bi-check-circle text-success"></i> End sessions on devices you no longer use</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Enable two-factor authentication for better security</li>
+                        <li><i class="bi bi-check-circle text-success"></i> Use strong, unique passwords</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
