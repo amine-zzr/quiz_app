@@ -116,20 +116,3 @@ def get_session_info(session_id):
         'is_active': user_session.is_active,
         'username': user_session.user_ref.username if user_session.user_ref else None
     }
-
-def get_session_info(session_id):
-    """Get detailed information about a session"""
-    user_session = UserSession.query.filter_by(session_id=session_id).first()
-    if not user_session:
-        return None
-        
-    return {
-        'id': user_session.id,
-        'user_id': user_session.user_id,
-        'ip_address': user_session.ip_address,
-        'user_agent': user_session.user_agent,
-        'created_at': user_session.created_at,
-        'last_activity': user_session.last_activity,
-        'is_active': user_session.is_active,
-        'username': user_session.user_ref.username if user_session.user_ref else None
-    }
