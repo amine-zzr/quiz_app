@@ -10,6 +10,11 @@ from extensions import db, login_manager, migrate
 from models import User, Quiz, Question, UserQuizResult
 from api import init_api
 from quiz_api import get_trivia_categories, fetch_and_save_quiz
+from session_manager import (
+    create_session, end_session, end_all_sessions,
+    validate_session, get_user_sessions, cleanup_sessions,
+    get_session_info
+)
 
 load_dotenv()
 
@@ -32,6 +37,14 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    @app.before_request
+    def before_request():
+        if current_user.is_authenticated:
+            if not validate_session():
+                logout_user()
+                flash('Your session has expired. Please login again.', 'warning')
+                return redirect(url_for('login'))
+
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -44,10 +57,14 @@ def create_app():
         if request.method == 'POST':
             email = request.form.get('email')
             password = request.form.get('password')
+            remember = request.form.get('remember', False) == 'on'
             user = User.query.filter_by(email=email).first()
             
             if user and user.check_password(password):
-                login_user(user)
+                login_user(user, remember=remember)
+                # Create new session
+                create_session(user.id)
+                
                 next_page = request.args.get('next')
                 flash('Login successful!', 'success')
                 return redirect(next_page if next_page else url_for('dashboard'))
@@ -104,9 +121,14 @@ def create_app():
     @app.route('/logout')
     @login_required
     def logout():
+        # End current session
+        session_id = session.get('session_id')
+        if session_id:
+            end_session(session_id)
+        
         logout_user()
-        flash('You have been logged out successfully', 'info')
-        return redirect(url_for('index'))
+        flash('You have been logged out.', 'success')
+        return redirect(url_for('login'))
 
     @app.route('/dashboard')
     @login_required
@@ -331,6 +353,79 @@ def create_app():
                              selected_quiz_id=quiz_id,
                              timeframe=timeframe,
                              user_stats=user_stats)
+
+    @app.route('/account/sessions')
+    @login_required
+    def view_sessions():
+        active_sessions = get_user_sessions(current_user.id)
+        return render_template('sessions.html', sessions=active_sessions)
+
+    @app.route('/account/sessions/end/<session_id>')
+    @login_required
+    def end_specific_session(session_id):
+        session_info = get_session_info(session_id)
+        if not session_info or session_info['user_id'] != current_user.id:
+            flash('Invalid session.', 'danger')
+            return redirect(url_for('view_sessions'))
+        
+        end_session(session_id)
+        flash('Session ended successfully.', 'success')
+        return redirect(url_for('view_sessions'))
+
+    @app.route('/account/sessions/end-all')
+    @login_required
+    def end_all_user_sessions():
+        current_session_id = session.get('session_id')
+        end_all_sessions(current_user.id, except_session_id=current_session_id)
+        flash('All other sessions have been ended.', 'success')
+        return redirect(url_for('view_sessions'))
+
+    @app.route('/profile', methods=['GET', 'POST'])
+    @login_required
+    def profile():
+        if request.method == 'POST':
+            username = request.form.get('username')
+            email = request.form.get('email')
+            new_password = request.form.get('new_password')
+            confirm_password = request.form.get('confirm_password')
+            
+            # Check if username is taken
+            if username != current_user.username:
+                user_exists = User.query.filter_by(username=username).first()
+                if user_exists:
+                    flash('Username already taken.', 'danger')
+                    return redirect(url_for('profile'))
+            
+            # Check if email is taken
+            if email != current_user.email:
+                email_exists = User.query.filter_by(email=email).first()
+                if email_exists:
+                    flash('Email already registered.', 'danger')
+                    return redirect(url_for('profile'))
+            
+            # Update password if provided
+            if new_password:
+                if new_password != confirm_password:
+                    flash('Passwords do not match.', 'danger')
+                    return redirect(url_for('profile'))
+                current_user.set_password(new_password)
+            
+            # Update user information
+            current_user.username = username
+            current_user.email = email
+            db.session.commit()
+            
+            flash('Profile updated successfully.', 'success')
+            return redirect(url_for('profile'))
+            
+        return render_template('profile.html')
+
+    # Run session cleanup periodically (24 hours)
+    @app.cli.command('cleanup-sessions')
+    def cleanup_sessions_command():
+        """Cleanup expired sessions."""
+        count = cleanup_sessions(max_age_hours=24)
+        print(f'Cleaned up {count} expired sessions.')
 
     with app.app_context():
         db.create_all()
