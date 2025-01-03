@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 import os
 from dotenv import load_dotenv
+from flask_wtf.csrf import CSRFProtect
 
 from extensions import db, login_manager, migrate
 from models import User, Quiz, Question, UserQuizResult
@@ -23,11 +24,13 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///quiz.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF token doesn't expire
 
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf = CSRFProtect(app)  # Initialize CSRF protection
     init_api(app)
 
     login_manager.login_view = 'login'
