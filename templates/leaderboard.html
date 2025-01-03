@@ -54,22 +54,30 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for result, username, quiz_title, percentage in leaderboard %}
+                                {% for result in leaderboard %}
                                 <tr {% if result.user_id == current_user.id %}class="table-primary"{% endif %}>
                                     <td>
                                         {% if loop.index == 1 %}
                                         <span class="badge bg-warning">
-                                            <i class="bi bi-trophy-fill"></i> 1st
+                                            <i class="fas fa-trophy"></i> 1st
+                                        </span>
+                                        {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary">
+                                            <i class="fas fa-trophy"></i> 2nd
+                                        </span>
+                                        {% elif loop.index == 3 %}
+                                        <span class="badge bg-bronze">
+                                            <i class="fas fa-trophy"></i> 3rd
                                         </span>
                                         {% else %}
                                         {{ loop.index }}
                                         {% endif %}
                                     </td>
-                                    <td>{{ username }}</td>
-                                    <td>{{ quiz_title }}</td>
-                                    <td>{{ "%.1f"|format(percentage) }}%</td>
-                                    <td>{{ result.time_taken|default(0)|int }} seconds</td>
-                                    <td>{{ result.completed_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>{{ result.username }}</td>
+                                    <td>{{ result.title }}</td>
+                                    <td>{{ "%.1f"|format(result.best_percentage) }}%</td>
+                                    <td>{{ result.best_time|int }} seconds</td>
+                                    <td>{{ result.latest_completion.strftime('%Y-%m-%d %H:%M') }}</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
