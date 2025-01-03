@@ -113,6 +113,7 @@
                     <div class="mb-4">
                         <h5 class="mb-3">Create from API</h5>
                         <form action="{{ url_for('create_quiz_api') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <div class="mb-3">
                                 <label for="category" class="form-label">Category</label>
                                 <select class="form-select" id="category" name="category_id">
