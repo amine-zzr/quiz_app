@@ -288,7 +288,7 @@ def create_app():
         quiz_id = request.args.get('quiz_id', type=int)
         timeframe = request.args.get('timeframe', 'all')
 
-        # Base query
+        # Base query to get the best score for each user
         results = db.session.query(
             UserQuizResult,
             User.username,
@@ -298,6 +298,17 @@ def create_app():
             User, UserQuizResult.user_id == User.id
         ).join(
             Quiz, UserQuizResult.quiz_id == Quiz.id
+        ).with_entities(
+            User.id.label('user_id'),
+            User.username,
+            Quiz.title,
+            func.max((UserQuizResult.score * 100.0 / UserQuizResult.total_questions)).label('best_percentage'),
+            func.min(UserQuizResult.time_taken).label('best_time'),
+            func.max(UserQuizResult.completed_at).label('latest_completion')
+        ).group_by(
+            User.id,
+            User.username,
+            Quiz.title
         )
 
         # Apply filters
@@ -313,10 +324,10 @@ def create_app():
                 start_date = datetime.utcnow() - timedelta(days=30)
             results = results.filter(UserQuizResult.completed_at >= start_date)
 
-        # Order by percentage and time taken
+        # Order by best percentage and best time
         results = results.order_by(
-            desc('percentage'),
-            UserQuizResult.time_taken
+            desc('best_percentage'),
+            'best_time'
         ).limit(100).all()
 
         # Calculate user stats
