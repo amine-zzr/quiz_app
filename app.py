@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta
@@ -126,6 +126,8 @@ def create_app():
         if session_id:
             end_session(session_id)
         
+        # Clear the session
+        session.clear()
         logout_user()
         flash('You have been logged out.', 'success')
         return redirect(url_for('login'))
