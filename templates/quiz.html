@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="card">
+    <div class="card quiz-card">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
@@ -25,6 +25,7 @@
         </div>
         <div class="card-body">
             <form id="quizForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 {% for question in quiz.questions %}
                 <div class="question-container {% if not loop.first %}d-none{% endif %}" data-question-id="{{ question.id }}" data-question-index="{{ loop.index }}">
                     <h5 class="question-text mb-3">{{ loop.index }}. {{ question.question_text }}</h5>
@@ -45,10 +46,6 @@
                             <input class="form-check-input" type="radio" name="question{{ question.id }}" value="D" id="q{{ question.id }}d">
                             <label class="form-check-label" for="q{{ question.id }}d">{{ question.option_d }}</label>
                         </div>
-                    </div>
-                    <div class="feedback-container mt-3" style="display: none;">
-                        <div class="alert" role="alert"></div>
-                        <div class="explanation text-muted mt-2"></div>
                     </div>
                 </div>
                 {% endfor %}
@@ -76,14 +73,18 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="results-summary mb-4">
-                        <h4>Your Score: <span id="scoreDisplay"></span></h4>
-                        <div class="progress mb-3">
+                    <div class="results-summary text-center mb-4">
+                        <h3 class="mb-3">Your Score</h3>
+                        <h1 class="display-4 mb-3" id="scoreDisplay"></h1>
+                        <div class="progress mb-3" style="height: 25px;">
                             <div class="progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
+                        <p class="text-muted" id="timeTaken"></p>
                     </div>
+                    <div id="feedbackContainer"></div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Review Answers</button>
                     <a href="{{ url_for('dashboard') }}" class="btn btn-primary">Return to Dashboard</a>
                 </div>
             </div>
@@ -96,69 +97,93 @@
 <script>
     let startTime = Date.now();
     let answers = {};
+    let timer;
+    let quizSubmitted = false;
 
     function submitQuiz() {
+        if (quizSubmitted) return;
+        
         const timeTaken = Math.floor((Date.now() - startTime) / 1000); // Convert to seconds
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
         
         fetch('/submit_quiz/{{ quiz.id }}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({
                 answers: answers,
                 time_taken: timeTaken
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
         .then(data => {
+            quizSubmitted = true;
             clearInterval(timer);
             
             // Update score display
-            document.getElementById('scoreDisplay').textContent = 
-                `${data.score}/${data.total} (${data.percentage.toFixed(1)}%)`;
+            const scoreText = `${data.score}/${data.total} (${data.percentage.toFixed(1)}%)`;
+            document.getElementById('scoreDisplay').textContent = scoreText;
             
             // Update progress bar
             const progressBar = document.querySelector('#resultsModal .progress-bar');
             progressBar.style.width = `${data.percentage}%`;
             progressBar.textContent = `${data.percentage.toFixed(1)}%`;
+            progressBar.className = `progress-bar ${data.percentage >= 70 ? 'bg-success' : data.percentage >= 40 ? 'bg-warning' : 'bg-danger'}`;
+            
+            // Show time taken
+            const minutes = Math.floor(data.time_taken / 60);
+            const seconds = data.time_taken % 60;
+            document.getElementById('timeTaken').textContent = 
+                `Time taken: ${minutes} minutes ${seconds} seconds`;
             
             // Show feedback for each question
-            data.feedback.forEach(feedback => {
+            const feedbackContainer = document.getElementById('feedbackContainer');
+            feedbackContainer.innerHTML = ''; // Clear previous feedback
+            
+            data.feedback.forEach((feedback, index) => {
                 const questionContainer = document.querySelector(`[data-question-id="${feedback.question_id}"]`);
-                const feedbackContainer = questionContainer.querySelector('.feedback-container');
-                const alertDiv = feedbackContainer.querySelector('.alert');
-                const explanationDiv = feedbackContainer.querySelector('.explanation');
+                const questionText = questionContainer.querySelector('.question-text').textContent;
                 
-                // Show all questions for review
-                questionContainer.classList.remove('d-none');
+                const feedbackElement = document.createElement('div');
+                feedbackElement.className = 'card mb-3';
+                feedbackElement.innerHTML = `
+                    <div class="card-body">
+                        <h6 class="card-title">Question ${index + 1}</h6>
+                        <p>${questionText}</p>
+                        <div class="alert ${feedback.is_correct ? 'alert-success' : 'alert-danger'}">
+                            ${feedback.is_correct ? 
+                                '<i class="fas fa-check-circle"></i> Correct!' : 
+                                `<i class="fas fa-times-circle"></i> Incorrect. The correct answer was option ${feedback.correct_answer}.`
+                            }
+                        </div>
+                        ${feedback.explanation ? 
+                            `<div class="text-muted mt-2">
+                                <small><i class="fas fa-info-circle"></i> ${feedback.explanation}</small>
+                            </div>` : ''
+                        }
+                    </div>
+                `;
+                feedbackContainer.appendChild(feedbackElement);
                 
-                // Disable all radio buttons
-                questionContainer.querySelectorAll('input[type="radio"]').forEach(input => {
+                // Update question display
+                const options = questionContainer.querySelectorAll('.form-check');
+                options.forEach(option => {
+                    const input = option.querySelector('input');
                     input.disabled = true;
+                    
+                    if (input.value === feedback.your_answer) {
+                        option.classList.add(feedback.is_correct ? 'text-success' : 'text-danger');
+                    } else if (input.value === feedback.correct_answer && !feedback.is_correct) {
+                        option.classList.add('text-success');
+                    }
                 });
-                
-                // Highlight correct and incorrect answers
-                const yourAnswerInput = questionContainer.querySelector(`input[value="${feedback.your_answer}"]`);
-                const correctAnswerInput = questionContainer.querySelector(`input[value="${feedback.correct_answer}"]`);
-                
-                if (feedback.is_correct) {
-                    alertDiv.className = 'alert alert-success';
-                    alertDiv.textContent = 'Correct!';
-                    yourAnswerInput.parentElement.classList.add('text-success');
-                } else {
-                    alertDiv.className = 'alert alert-danger';
-                    alertDiv.textContent = `Incorrect. The correct answer was option ${feedback.correct_answer}.`;
-                    yourAnswerInput.parentElement.classList.add('text-danger');
-                    correctAnswerInput.parentElement.classList.add('text-success');
-                }
-                
-                // Show explanation if available
-                if (feedback.explanation) {
-                    explanationDiv.textContent = `Explanation: ${feedback.explanation}`;
-                }
-                
-                feedbackContainer.style.display = 'block';
             });
 
             // Hide navigation buttons
@@ -169,32 +194,23 @@
             resultsModal.show();
 
             // Clear saved answers
-            localStorage.clear();
+            localStorage.removeItem('quizAnswers_{{ quiz.id }}');
         })
         .catch(error => {
             console.error('Error:', error);
             alert('An error occurred while submitting the quiz. Please try again.');
+            quizSubmitted = false;
         });
-    }
-
-    function selectAnswer(questionId, answer) {
-        answers[questionId] = answer;
-        // Update UI to show selected answer
-        const options = document.querySelectorAll(`input[name="question${questionId}"]`);
-        options.forEach(option => {
-            const label = option.parentElement;
-            if (option.value === answer) {
-                label.classList.add('selected');
-            } else {
-                label.classList.remove('selected');
-            }
-        });
+        
+        return false; // Prevent form submission
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        const quizForm = document.getElementById('quizForm');
         const totalQuestions = {{ quiz.questions|length }};
         let currentQuestionIndex = 1;
         let timeLeft = {{ quiz.time_limit * 60 }};
+        
         const timerDisplay = document.getElementById('timer');
         const progressBar = document.getElementById('progressBar');
         const currentQuestionDisplay = document.getElementById('currentQuestionNum');
@@ -202,8 +218,9 @@
         const nextBtn = document.getElementById('nextBtn');
         const submitBtn = document.getElementById('submitBtn');
 
-        // Timer functionality
-        const timer = setInterval(() => {
+        // Initialize timer
+        timer = setInterval(() => {
+            timeLeft--;
             const minutes = Math.floor(timeLeft / 60);
             const seconds = timeLeft % 60;
             timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
@@ -216,8 +233,26 @@
                 clearInterval(timer);
                 submitQuiz();
             }
-            timeLeft--;
         }, 1000);
+
+        // Load saved answers
+        const savedAnswers = localStorage.getItem('quizAnswers_{{ quiz.id }}');
+        if (savedAnswers) {
+            answers = JSON.parse(savedAnswers);
+            Object.entries(answers).forEach(([questionId, answer]) => {
+                const input = document.querySelector(`input[name="question${questionId}"][value="${answer}"]`);
+                if (input) input.checked = true;
+            });
+        }
+
+        // Handle answer selection
+        document.querySelectorAll('input[type="radio"]').forEach(input => {
+            input.addEventListener('change', function() {
+                const questionId = this.name.replace('question', '');
+                answers[questionId] = this.value;
+                localStorage.setItem('quizAnswers_{{ quiz.id }}', JSON.stringify(answers));
+            });
+        });
 
         function updateNavigation() {
             prevBtn.disabled = currentQuestionIndex === 1;
@@ -229,18 +264,14 @@
                 nextBtn.classList.remove('d-none');
                 submitBtn.classList.add('d-none');
             }
-
-            // Update progress
-            const progress = (currentQuestionIndex / totalQuestions) * 100;
-            progressBar.style.width = `${progress}%`;
+            
+            progressBar.style.width = `${(currentQuestionIndex / totalQuestions) * 100}%`;
             currentQuestionDisplay.textContent = currentQuestionIndex;
         }
 
         function showQuestion(index) {
-            document.querySelectorAll('.question-container').forEach(container => {
-                container.classList.add('d-none');
-            });
-            document.querySelector(`.question-container[data-question-index="${index}"]`).classList.remove('d-none');
+            document.querySelectorAll('.question-container').forEach(q => q.classList.add('d-none'));
+            document.querySelector(`[data-question-index="${index}"]`).classList.remove('d-none');
             currentQuestionIndex = index;
             updateNavigation();
         }
@@ -257,23 +288,17 @@
             }
         });
 
-        // Save answers as user progresses
-        document.querySelectorAll('input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                selectAnswer(radio.name.replace('question', ''), radio.value);
-            });
-
-            // Restore saved answers
-            const savedAnswer = localStorage.getItem(`quiz_{{ quiz.id }}_${radio.name}`);
-            if (savedAnswer === radio.value) {
-                radio.checked = true;
-            }
-        });
-
-        document.getElementById('quizForm').addEventListener('submit', function(e) {
+        quizForm.addEventListener('submit', function(e) {
             e.preventDefault();
             submitQuiz();
         });
+
+        // Save answers periodically
+        setInterval(() => {
+            if (!quizSubmitted) {
+                localStorage.setItem('quizAnswers_{{ quiz.id }}', JSON.stringify(answers));
+            }
+        }, 5000);
     });
 </script>
 {% endblock %}
