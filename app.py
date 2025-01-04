@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta
 from sqlalchemy import func, desc
 import os
 from dotenv import load_dotenv
+from flask_wtf.csrf import CSRFProtect
 
 from extensions import db, login_manager, migrate
 from models import User, Quiz, Question, UserQuizResult
@@ -23,11 +24,13 @@ def create_app():
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///quiz.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['WTF_CSRF_TIME_LIMIT'] = None  # CSRF token doesn't expire
 
     # Initialize extensions
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
+    csrf = CSRFProtect(app)  # Initialize CSRF protection
     init_api(app)
 
     login_manager.login_view = 'login'
@@ -126,6 +129,8 @@ def create_app():
         if session_id:
             end_session(session_id)
         
+        # Clear the session
+        session.clear()
         logout_user()
         flash('You have been logged out.', 'success')
         return redirect(url_for('login'))
@@ -283,7 +288,7 @@ def create_app():
         quiz_id = request.args.get('quiz_id', type=int)
         timeframe = request.args.get('timeframe', 'all')
 
-        # Base query
+        # Base query to get the best score for each user
         results = db.session.query(
             UserQuizResult,
             User.username,
@@ -293,6 +298,17 @@ def create_app():
             User, UserQuizResult.user_id == User.id
         ).join(
             Quiz, UserQuizResult.quiz_id == Quiz.id
+        ).with_entities(
+            User.id.label('user_id'),
+            User.username,
+            Quiz.title,
+            func.max((UserQuizResult.score * 100.0 / UserQuizResult.total_questions)).label('best_percentage'),
+            func.min(UserQuizResult.time_taken).label('best_time'),
+            func.max(UserQuizResult.completed_at).label('latest_completion')
+        ).group_by(
+            User.id,
+            User.username,
+            Quiz.title
         )
 
         # Apply filters
@@ -308,10 +324,10 @@ def create_app():
                 start_date = datetime.utcnow() - timedelta(days=30)
             results = results.filter(UserQuizResult.completed_at >= start_date)
 
-        # Order by percentage and time taken
+        # Order by best percentage and best time
         results = results.order_by(
-            desc('percentage'),
-            UserQuizResult.time_taken
+            desc('best_percentage'),
+            'best_time'
         ).limit(100).all()
 
         # Calculate user stats

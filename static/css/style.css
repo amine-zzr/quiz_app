@@ -150,6 +150,11 @@ body {
     background-color: rgba(205, 127, 50, 0.1);
 }
 
+.bg-bronze {
+    background-color: #cd7f32;
+    color: white;
+}
+
 /* Profile page */
 .profile-header {
     background-color: #fff;

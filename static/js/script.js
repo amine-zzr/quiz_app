@@ -41,8 +41,29 @@ class QuizTimer {
     }
 }
 
-// Form Validation
+// Get CSRF token from meta tag
+function getCsrfToken() {
+    return document.querySelector('meta[name="csrf-token"]').content;
+}
+
+// Add CSRF token to all AJAX requests
 document.addEventListener('DOMContentLoaded', function() {
+    // Add CSRF token to all fetch requests
+    const originalFetch = window.fetch;
+    window.fetch = function() {
+        let [resource, config] = arguments;
+        if(config === undefined) {
+            config = {};
+        }
+        if(config.headers === undefined) {
+            config.headers = {};
+        }
+        if(config.method && config.method.toUpperCase() !== 'GET') {
+            config.headers['X-CSRF-Token'] = getCsrfToken();
+        }
+        return originalFetch(resource, config);
+    };
+
     // Password strength indicator
     const passwordInput = document.querySelector('input[type="password"]');
     if (passwordInput) {
