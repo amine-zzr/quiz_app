@@ -142,16 +142,34 @@ The application integrates with external quiz APIs to generate questions:
 
 ## 🚀 Deployment
 
-### Production Setup
-1. Use a production-grade server (e.g., Gunicorn)
-2. Set up a reverse proxy (e.g., Nginx)
-3. Configure SSL/TLS
-4. Use environment variables for sensitive data
+This application is configured for deployment on [Render.com](https://render.com).
 
-### Example Deployment Commands
+### Quick Deploy Steps
+
+1. Push your code to GitHub:
 ```bash
-gunicorn -w 4 -b 127.0.0.1:8000 app:app
+git init
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote add origin https://github.com/amine-zzr/quiz_app.git
+git push -u origin main
 ```
+
+2. On Render.com:
+   - Sign up for a free account
+   - Create a new Web Service
+   - Connect your GitHub repository
+   - Use the following settings:
+     - Name: quizmaster
+     - Build Command: `pip install -r requirements.txt`
+     - Start Command: `gunicorn wsgi:app`
+
+3. The application will be available at your Render URL
+
+### Note
+- Free tier may sleep after 15 minutes of inactivity
+- First request after inactivity may take ~30 seconds
 
 ## 📝 License
 
