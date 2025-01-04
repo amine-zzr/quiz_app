@@ -40,8 +40,8 @@ QuizMaster is a modern, feature-rich quiz application built with Flask that allo
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/quiz-master.git
-cd quiz-master
+git clone https://github.com/amine-zzr/quiz_app.git
+cd quiz_app
 ```
 
 2. Create and activate a virtual environment:
@@ -93,8 +93,7 @@ quiz_app/
 │   ├── base.html    # Base template
 │   ├── index.html   # Landing page
 │   └── ...          # Other templates
-├── migrations/      # Database migrations
-└── instance/        # Instance-specific files
+└── migrations/      # Database migrations
 ```
 
 ## 🔧 Configuration
@@ -117,16 +116,6 @@ flask db migrate -m "Description of changes"
 flask db upgrade
 ```
 
-### Running Tests
-```bash
-python -m pytest tests/
-```
-
-### Code Style
-The project follows PEP 8 guidelines. Run linting:
-```bash
-flake8 .
-```
 
 ## 📚 API Documentation
 
@@ -185,7 +174,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📧 Contact
 
-For questions and support, please open an issue or contact [your-email@example.com].
+For questions and support, please open an issue or contact [aminezoukri@gmail.com].
 
 ---
-Made with ❤️ by [Your Name]
+Made with ❤️ by amine-zzr
